@@ -1,0 +1,127 @@
+
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>ValerioBulls – Rule #1 Stock Valuation</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+  <div class="container">
+    <h1>ValerioBulls</h1>
+    <p class="subtitle">Phil Town–style Rule #1 Stock Valuation</p>
+
+    <div class="card">
+      <label for="ticker">Enter Ticker (AAPL, MSFT, TSLA, PLTR, etc.)</label>
+      <input id="ticker" type="text" placeholder="AAPL" />
+      <button id="calc-btn">Calculate</button>
+      <div id="status"></div>
+    </div>
+
+    <div id="results" class="card hidden">
+      <h2 id="company-title"></h2>
+
+      <div class="row">
+        <div class="col">
+          <h3>Inputs</h3>
+          <p><strong>Current Price:</strong> $<span id="price"></span></p>
+          <p><strong>EPS (TTM):</strong> <span id="eps"></span></p>
+          <p><strong>Assumed Growth:</strong> <span id="growth"></span>%</p>
+          <p><strong>Future P/E:</strong> <span id="future_pe"></span></p>
+          <p><strong>Discount Rate:</strong> <span id="discount"></span>%</p>
+        </div>
+        <div class="col">
+          <h3>Sticker Price</h3>
+          <p><strong>Future EPS (10 yrs):</strong> <span id="future_eps"></span></p>
+          <p><strong>Future Value:</strong> $<span id="future_value"></span></p>
+          <p><strong>Sticker Price:</strong> $<span id="sticker"></span></p>
+          <p><strong>Margin of Safety (50%):</strong> $<span id="mos"></span></p>
+        </div>
+      </div>
+
+      <div class="row">
+        <div class="col">
+          <h3>10-Cap</h3>
+          <p><strong>10-Cap Value per Share:</strong> $<span id="ten_cap"></span></p>
+        </div>
+        <div class="col">
+          <h3>Payback (8 years)</h3>
+          <p><strong>Payback Price:</strong> $<span id="payback_price"></span></p>
+        </div>
+      </div>
+
+      <div id="verdict" class="verdict"></div>
+    </div>
+  </div>
+
+  <script>
+    const btn = document.getElementById("calc-btn");
+    const statusEl = document.getElementById("status");
+    const resultsEl = document.getElementById("results");
+    const verdictEl = document.getElementById("verdict");
+
+    btn.addEventListener("click", async () => {
+      const tickerInput = document.getElementById("ticker");
+      const ticker = tickerInput.value.trim().toUpperCase();
+      if (!ticker) {
+        alert("Please enter a ticker.");
+        return;
+      }
+
+      statusEl.textContent = "Loading...";
+      resultsEl.classList.add("hidden");
+      verdictEl.textContent = "";
+      verdictEl.className = "verdict";
+
+      try {
+        const res = await fetch(`/api/value?ticker=${encodeURIComponent(ticker)}`);
+        const data = await res.json();
+
+        if (!res.ok || data.error) {
+          statusEl.textContent = "Error: " + (data.error || res.statusText);
+          return;
+        }
+
+        statusEl.textContent = "";
+
+        document.getElementById("company-title").textContent = `Results for ${data.ticker}`;
+
+        const fmt = (x) => Number(x).toFixed(2);
+
+        document.getElementById("price").textContent = fmt(data.price);
+        document.getElementById("eps").textContent = fmt(data.eps);
+        document.getElementById("growth").textContent = (data.growth * 100).toFixed(1);
+        document.getElementById("future_pe").textContent = fmt(data.future_pe);
+        document.getElementById("discount").textContent = (data.discount * 100).toFixed(1);
+        document.getElementById("future_eps").textContent = fmt(data.future_eps);
+        document.getElementById("future_value").textContent = fmt(data.future_value);
+        document.getElementById("sticker").textContent = fmt(data.sticker);
+        document.getElementById("mos").textContent = fmt(data.mos);
+        document.getElementById("ten_cap").textContent = fmt(data.ten_cap);
+        document.getElementById("payback_price").textContent = fmt(data.payback_price);
+
+        const current = Number(data.price);
+        const mosVal = Number(data.mos);
+        const sticker = Number(data.sticker);
+
+        if (current < mosVal) {
+          verdictEl.textContent = "✅ Below Margin of Safety – potential BUY.";
+          verdictEl.classList.add("good");
+        } else if (current < sticker) {
+          verdictEl.textContent = "🟡 Between MOS and Sticker – maybe WATCH.";
+          verdictEl.classList.add("neutral");
+        } else {
+          verdictEl.textContent = "❌ Above Sticker Price – likely OVERPRICED.";
+          verdictEl.classList.add("bad");
+        }
+
+        resultsEl.classList.remove("hidden");
+      } catch (err) {
+        console.error(err);
+        statusEl.textContent = "Something went wrong talking to the server.";
+      }
+    });
+  </script>
+
+</body>
+</html>
