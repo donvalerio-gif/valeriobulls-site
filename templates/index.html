@@ -74,15 +74,21 @@
       verdictEl.className = "verdict";
 
       try {
-        const res = await fetch(`/api/value?ticker=${encodeURIComponent(ticker)}`);
-        const data = await res.json();
+    const res = await fetch("https://valeriobulls.onrender.com/value", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ticker })
+    });
 
-        if (!res.ok || data.error) {
-          statusEl.textContent = "Error: " + (data.error || res.statusText);
-          return;
-        }
+    const data = await res.json();
 
-        statusEl.textContent = "";
+    if (!res.ok || data.error) {
+        statusEl.textContent = "Error: " + (data.error || res.statusText);
+        return;
+    }
+
+    statusEl.textContent = "";
+
 
         document.getElementById("company-title").textContent = `Results for ${data.ticker}`;
 
